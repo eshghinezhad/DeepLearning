@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RNNs & CNNs for Sequences — Study Notes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a1120;
+    --bg-panel:#111c30;
+    --bg-panel-2:#0e1729;
+    --line: rgba(148,178,214,0.14);
+    --text:#e8edf5;
+    --text-dim:#8fa0b8;
+    --accent:#5eead4;
+    --accent-soft: rgba(94,234,212,0.12);
+    --accent2:#f4b860;
+    --accent2-soft: rgba(244,184,96,0.12);
+    --pink:#f2789f;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(94,234,212,0.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, rgba(244,184,96,0.05), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    line-height:1.6;
+  }
+  h1,h2,h3,h4{font-family:'Space Grotesk', sans-serif; letter-spacing:-0.01em; margin:0;}
+  code, pre, .mono{font-family:'JetBrains Mono', monospace;}
+  a{color:var(--accent);}
+
+  /* ---------- layout ---------- */
+  .shell{display:grid; grid-template-columns:260px 1fr; max-width:1280px; margin:0 auto;}
+  @media (max-width:900px){ .shell{grid-template-columns:1fr;} .sidebar{position:static; height:auto; border-right:none; border-bottom:1px solid var(--line);} }
+
+  .sidebar{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px; border-right:1px solid var(--line);
+  }
+  .brand{font-family:'Space Grotesk'; font-weight:700; font-size:15px; color:var(--accent); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:4px;}
+  .brand-sub{font-size:12px; color:var(--text-dim); margin-bottom:22px;}
+  nav.toc a{
+    display:block; font-size:13.5px; color:var(--text-dim); text-decoration:none;
+    padding:7px 10px; border-radius:8px; margin-bottom:2px; border-left:2px solid transparent;
+    transition:all .15s ease;
+  }
+  nav.toc a:hover{color:var(--text); background:rgba(255,255,255,0.03);}
+  nav.toc a.active{color:var(--accent); background:var(--accent-soft); border-left:2px solid var(--accent);}
+  nav.toc .grp{font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:#516179; margin:16px 0 4px 10px;}
+
+  main{padding:52px 56px 120px; min-width:0;}
+  @media (max-width:900px){ main{padding:34px 20px 90px;} }
+
+  /* ---------- hero ---------- */
+  .hero{margin-bottom:64px;}
+  .kicker{color:var(--accent2); font-size:13px; text-transform:uppercase; letter-spacing:.16em; font-weight:600; margin-bottom:14px;}
+  .hero h1{font-size:clamp(30px,4.4vw,46px); font-weight:700; line-height:1.08; max-width:720px;}
+  .hero p.lead{color:var(--text-dim); font-size:16.5px; max-width:640px; margin-top:16px;}
+  .hero-diagram{margin-top:36px; border:1px solid var(--line); border-radius:14px; padding:22px 22px 12px; background:var(--bg-panel);}
+  .hero-diagram .cap{font-size:12px; color:var(--text-dim); margin-top:8px; text-align:center;}
+
+  /* ---------- sections ---------- */
+  section{padding-top:70px; margin-top:-70px;}
+  .sec-title{display:flex; align-items:baseline; gap:12px; margin-bottom:6px;}
+  .sec-num{font-family:'JetBrains Mono'; color:var(--accent2); font-size:14px;}
+  .sec-title h2{font-size:26px;}
+  .sec-tag{font-size:12px; color:var(--text-dim); margin-bottom:26px;}
+  p{color:#cdd7e5; font-size:15.2px;}
+  .lead-p{color:var(--text-dim);}
+  ul,ol{color:#cdd7e5; font-size:15.2px; padding-left:20px;}
+  li{margin-bottom:6px;}
+  strong{color:var(--text); font-weight:600;}
+
+  hr.div{border:none; border-top:1px solid var(--line); margin:70px 0;}
+
+  /* ---------- callouts ---------- */
+  .box{border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin:20px 0; background:var(--bg-panel);}
+  .why{border-left:3px solid var(--accent); }
+  .why .tag{color:var(--accent); font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; font-weight:600; margin-bottom:6px;}
+  .gotcha{border-left:3px solid var(--pink);}
+  .gotcha .tag{color:var(--pink); font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; font-weight:600; margin-bottom:6px;}
+  .eq{border-left:3px solid var(--accent2); background:var(--accent2-soft); font-family:'JetBrains Mono'; font-size:14px; color:#ffe4b3; padding:16px 20px; border-radius:10px; margin:18px 0; overflow-x:auto;}
+
+  details{border:1px solid var(--line); border-radius:12px; margin:16px 0; background:var(--bg-panel-2); overflow:hidden;}
+  details summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14px; color:var(--text);
+    list-style:none; display:flex; align-items:center; gap:10px;
+  }
+  details summary::-webkit-details-marker{display:none;}
+  details summary::before{content:"▸"; color:var(--accent); transition:transform .15s ease; font-size:12px;}
+  details[open] summary::before{transform:rotate(90deg);}
+  details .inner{padding:0 18px 18px; color:#cdd7e5; font-size:14.5px;}
+
+  pre.code{
+    background:#060b16; border:1px solid var(--line); border-radius:10px;
+    padding:16px 18px; overflow-x:auto; font-size:13px; line-height:1.55; margin:16px 0;
+  }
+  pre.code .c{color:#5b6b84;} /* comment */
+  pre.code .k{color:#f2789f;} /* keyword */
+  pre.code .s{color:var(--accent2);} /* string/self */
+  pre.code .f{color:var(--accent);} /* function/class */
+  code.inline{background:rgba(94,234,212,0.1); color:var(--accent); padding:2px 6px; border-radius:5px; font-size:13px;}
+
+  table{width:100%; border-collapse:collapse; margin:18px 0; font-size:13.8px;}
+  th,td{border:1px solid var(--line); padding:10px 12px; text-align:left; color:#cdd7e5;}
+  th{color:var(--accent); font-family:'Space Grotesk'; font-weight:600; background:rgba(94,234,212,0.05);}
+
+  svg text{font-family:'JetBrains Mono', monospace;}
+  .diagram{width:100%; height:auto; display:block;}
+
+  .footer{color:#516179; font-size:12.5px; padding-top:20px; border-top:1px solid var(--line); margin-top:60px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">Deep Learning</div>
+    <div class="brand-sub">RNNs &amp; CNNs for Sequences — study notes</div>
+    <nav class="toc" id="toc">
+      <div class="grp">Foundations</div>
+      <a href="#why-sequences">0 · Why sequences are special</a>
+      <a href="#forecasting">1 · The forecasting problem</a>
+      <a href="#windows">2 · Sliding windows &amp; Dataset</a>
+      <div class="grp">The RNN family</div>
+      <a href="#simple-rnn">3 · Simple RNN</a>
+      <a href="#deep-rnn">4 · Deep RNN</a>
+      <a href="#multivar">5 · Multivariate &amp; multitask</a>
+      <a href="#horizon">6 · Forecasting many steps ahead</a>
+      <a href="#seq2seq">7 · Sequence-to-sequence</a>
+      <a href="#layernorm">8 · Layer Norm in RNNs</a>
+      <a href="#lstm">9 · LSTM</a>
+      <a href="#gru">10 · GRU</a>
+      <div class="grp">Beyond RNNs</div>
+      <a href="#conv1d">11 · 1D convolutions</a>
+      <a href="#wavenet">12 · WaveNet</a>
+      <a href="#bach">13 · Case study: generating music</a>
+      <div class="grp">Wrap-up</div>
+      <a href="#cheatsheet">14 · Cheat sheet</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <div class="hero">
+      <div class="kicker">Chapter 13 · Géron, Hands-On ML (PyTorch edition)</div>
+      <h1>Processing Sequences with RNNs &amp; CNNs</h1>
+      <p class="lead">A teacher's walkthrough of the notebook, not just a summary of it. For every block of code we ask: <em>what problem is this solving, why does it work, and what would break if we did it differently?</em> The running example throughout is real: forecasting daily ridership on Chicago's bus and rail systems.</p>
+
+      <div class="hero-diagram">
+        <svg class="diagram" viewBox="0 0 760 190" xmlns="http://www.w3.org/2000/svg">
+          <style>
+            .node{fill:#0e1729; stroke:#2a3b57; stroke-width:1.4;}
+            .h{fill:var(--accent); opacity:0.85;}
+            .flowline{stroke:#3a4d6b; stroke-width:1.6; fill:none;}
+            .lbl{fill:#8fa0b8; font-size:11px;}
+            .lblA{fill:#5eead4; font-size:11px; font-weight:600;}
+            .pulse{animation:pulse 2.4s ease-in-out infinite;}
+            @keyframes pulse{0%,100%{opacity:.55;} 50%{opacity:1;}}
+          </style>
+          <text x="10" y="20" class="lblA">unrolled through time →</text>
+          <!-- 4 time steps -->
+          <g>
+            <!-- x_t boxes -->
+            <rect x="40"  y="140" width="46" height="30" rx="6" class="node"/>
+            <rect x="200" y="140" width="46" height="30" rx="6" class="node"/>
+            <rect x="360" y="140" width="46" height="30" rx="6" class="node"/>
+            <rect x="520" y="140" width="46" height="30" rx="6" class="node"/>
+            <text x="63" y="160" text-anchor="middle" class="lbl">x₁</text>
+            <text x="223" y="160" text-anchor="middle" class="lbl">x₂</text>
+            <text x="383" y="160" text-anchor="middle" class="lbl">x₃</text>
+            <text x="543" y="160" text-anchor="middle" class="lbl">xₜ</text>
+
+            <!-- hidden state circles -->
+            <circle cx="63"  cy="80" r="20" class="h pulse" style="animation-delay:0s"/>
+            <circle cx="223" cy="80" r="20" class="h pulse" style="animation-delay:.5s"/>
+            <circle cx="383" cy="80" r="20" class="h pulse" style="animation-delay:1s"/>
+            <circle cx="543" cy="80" r="20" class="h pulse" style="animation-delay:1.5s"/>
+            <text x="63" y="84" text-anchor="middle" font-size="11" fill="#06231f">h₁</text>
+            <text x="223" y="84" text-anchor="middle" font-size="11" fill="#06231f">h₂</text>
+            <text x="383" y="84" text-anchor="middle" font-size="11" fill="#06231f">h₃</text>
+            <text x="543" y="84" text-anchor="middle" font-size="11" fill="#06231f">hₜ</text>
+
+            <!-- arrows x -> h -->
+            <path d="M63,140 L63,100"  class="flowline" marker-end="url(#arrow)"/>
+            <path d="M223,140 L223,100" class="flowline" marker-end="url(#arrow)"/>
+            <path d="M383,140 L383,100" class="flowline" marker-end="url(#arrow)"/>
+            <path d="M543,140 L543,100" class="flowline" marker-end="url(#arrow)"/>
+
+            <!-- arrows h -> h (recurrence, the memory) -->
+            <path d="M83,80 L203,80"  class="flowline" marker-end="url(#arrow)"/>
+            <path d="M243,80 L363,80" class="flowline" marker-end="url(#arrow)"/>
+            <path d="M403,80 L523,80" class="flowline" marker-end="url(#arrow)"/>
+            <path d="M563,80 L610,80" class="flowline" stroke-dasharray="3,4" marker-end="url(#arrow)"/>
+
+            <!-- output only at last step for our forecaster -->
+            <circle cx="660" cy="80" r="6" fill="var(--accent2)"/>
+            <text x="672" y="84" class="lbl">→ ŷ (forecast)</text>
+          </g>
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#4a5f80"/>
+            </marker>
+          </defs>
+        </svg>
+        <div class="cap">The same tiny neural network is reused at every time step. The only thing that carries information forward is the hidden state <span class="mono">h</span> — that's the entire idea of an RNN.</div>
+      </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <section id="why-sequences">
+      <div class="sec-title"><span class="sec-num">00</span><h2>Why sequences need a different kind of network</h2></div>
+      <div class="sec-tag">The core idea before any code</div>
+
+      <p>A regular feedforward network (or even a CNN on a single image) assumes every input is independent and has a fixed size. Sequences break both assumptions: today's ridership depends on yesterday's, last week's, last year's — and a sequence can be arbitrarily long.</p>
+
+      <p>A <strong>recurrent neural network (RNN)</strong> solves this with one trick: it keeps a running summary of everything it has seen so far, called the <strong>hidden state</strong> <code class="inline">h</code>, and updates that summary one time step at a time using the <em>same</em> weights every time.</p>
+
+      <div class="eq">h_t = tanh( W_x · x_t + W_h · h_(t−1) + b )</div>
+
+      <div class="box why">
+        <div class="tag">Why this matters</div>
+        Because the weights (<code class="inline">W_x</code>, <code class="inline">W_h</code>) are shared across every time step, the network doesn't need a separate set of parameters per position in the sequence — it can handle a 10-step window or a 10,000-step window with the exact same model. This is the sequence equivalent of a CNN's "same filter, every location" idea.
+      </div>
+
+      <p>This chapter uses that idea in two very different bodies:</p>
+      <ol>
+        <li><strong>RNNs</strong> (plain, deep, LSTM, GRU) — explicit hidden state, processed step by step.</li>
+        <li><strong>1D CNNs</strong> (including WaveNet) — no hidden state at all; instead, convolutions slide over the time axis, and stacking many layers with growing dilation lets the network "see" further into the past.</li>
+      </ol>
+      <p>Both are trying to answer the same question — "given the recent past, what comes next?" — with different mechanics and different trade-offs (explained as we go).</p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="forecasting">
+      <div class="sec-title"><span class="sec-num">01</span><h2>The forecasting problem &amp; sane baselines</h2></div>
+      <div class="sec-tag">Chicago bus &amp; rail ridership, daily counts</div>
+
+      <p>The dataset is daily bus and rail ridership. Before touching a neural net, the notebook builds <strong>baselines</strong> — and this is a habit worth stealing for every project: if your fancy model can't beat a dumb baseline, it isn't earning its complexity.</p>
+
+      <div class="box why">
+        <div class="tag">Two baselines used here</div>
+        <ul>
+          <li><strong>Naive forecast:</strong> "tomorrow will look like the same weekday last week" (a lag-7 forecast). Ridership has strong weekly seasonality (weekday vs. weekend), so this is a surprisingly strong baseline.</li>
+          <li><strong>ARIMA / SARIMA:</strong> a classical statistical model from the ARMA family (AutoRegressive Moving Average). It models a value as a linear combination of its own past values plus past forecast errors. It's a solid baseline for series that are fairly regular and don't have complex nonlinear patterns.</li>
+        </ul>
+      </div>
+
+      <p>Two error metrics are used to score forecasts:</p>
+      <table>
+        <tr><th>Metric</th><th>Formula (intuition)</th><th>When to prefer it</th></tr>
+        <tr><td><strong>MAE</strong> (mean absolute error)</td><td>average of <code class="inline">|y − ŷ|</code></td><td>same units as the target; robust, easy to explain</td></tr>
+        <tr><td><strong>MAPE</strong> (mean absolute percentage error)</td><td>average of <code class="inline">|y − ŷ| / y</code></td><td>scale-free — good for comparing series with very different magnitudes (bus vs. rail counts)</td></tr>
+      </table>
+
+      <div class="box gotcha">
+        <div class="tag">Watch out</div>
+        MAPE blows up (or divides by zero) when the true value <code class="inline">y</code> is near zero. Fine for ridership counts (rarely zero), risky for series that can hit zero.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="windows">
+      <div class="sec-title"><span class="sec-num">02</span><h2>Turning a time series into supervised learning</h2></div>
+      <div class="sec-tag"><code class="inline">TimeSeriesDataset</code> and the sliding-window trick</div>
+
+      <p>Neural nets don't understand "a time series" — they understand fixed-size input tensors mapped to targets. The standard trick is a <strong>sliding window</strong>: take a chunk of <code class="inline">window_length</code> consecutive values as input, and the very next value as the target. Slide the window forward by one step and repeat.</p>
+
+      <pre class="code"><span class="k">class</span> <span class="f">TimeSeriesDataset</span>(torch.utils.data.Dataset):
+    <span class="k">def</span> <span class="f">__init__</span>(self, series, window_length):
+        self.series = series
+        self.window_length = window_length
+
+    <span class="k">def</span> <span class="f">__len__</span>(self):
+        <span class="k">return</span> len(self.series) - self.window_length
+
+    <span class="k">def</span> <span class="f">__getitem__</span>(self, idx):
+        end = idx + self.window_length   <span class="c"># 1st index after the window</span>
+        window = self.series[idx : end]
+        target = self.series[end]         <span class="c"># the very next value</span>
+        <span class="k">return</span> window, target</pre>
+
+      <div class="box why">
+        <div class="tag">Why this matters</div>
+        This is the pattern behind <em>every</em> sequence dataset you'll build — text, audio, sensor logs, stock prices. Only the definition of "target" changes (next value? next 14 values? a class label?). Learn this class once and you can adapt it to almost any sequence problem, which is exactly what the rest of the notebook does (<code class="inline">ForecastAheadDataset</code>, <code class="inline">Seq2SeqDataset</code>, <code class="inline">MulvarTimeSeriesDataset</code> all just subclass and tweak <code class="inline">__getitem__</code>).
+      </div>
+
+      <p><code class="inline">window_length = 56</code> means 8 weeks of history per training example — long enough to capture both weekly and some longer patterns, short enough to keep training fast.</p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="simple-rnn">
+      <div class="sec-title"><span class="sec-num">03</span><h2>The Simple RNN — built by hand, then with <code class="inline">nn.RNN</code></h2></div>
+      <div class="sec-tag">Seeing the mechanism before trusting the shortcut</div>
+
+      <p>The notebook makes a great pedagogical choice: it builds a Simple RNN <em>from scratch</em> first, then shows that <code class="inline">nn.RNN</code> does the same thing internally. Read the hand-built version slowly — everything else in the chapter is a variation of this loop.</p>
+
+      <pre class="code"><span class="k">class</span> <span class="f">SimpleRnnModel</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.memory_cell = nn.Sequential(
+            nn.Linear(input_size + hidden_size, hidden_size),
+            nn.Tanh()
+        )
+        self.output = nn.Linear(hidden_size, output_size)
+
+    <span class="k">def</span> <span class="f">forward</span>(self, X):                     <span class="c"># X: (batch, time, features)</span>
+        batch_size, window_length, dimensionality = X.shape
+        X_time_first = X.transpose(0, 1)          <span class="c"># (time, batch, features)</span>
+        H = torch.zeros(batch_size, self.hidden_size, device=X.device)
+        <span class="k">for</span> X_t <span class="k">in</span> X_time_first:                  <span class="c"># one step at a time</span>
+            XH = torch.cat((X_t, H), dim=1)       <span class="c"># concat input + previous memory</span>
+            H = self.memory_cell(XH)              <span class="c"># new memory = f(input, old memory)</span>
+        <span class="k">return</span> self.output(H)                       <span class="c"># only the FINAL hidden state is used</span></pre>
+
+      <details>
+        <summary>Teacher's aside — walk through the shapes</summary>
+        <div class="inner">
+          <p>Say <code class="inline">batch_size=32</code>, <code class="inline">window_length=56</code>, one feature (rail ridership only), <code class="inline">hidden_size=32</code>.</p>
+          <ul>
+            <li><code class="inline">X</code> arrives as <code class="inline">(32, 56, 1)</code>. Transposing gives <code class="inline">(56, 32, 1)</code> so we can iterate over the 56 time steps, each of shape <code class="inline">(32, 1)</code>.</li>
+            <li><code class="inline">H</code> starts as zeros, shape <code class="inline">(32, 32)</code> — "no memory yet."</li>
+            <li>At each step: concatenate the current input <code class="inline">(32,1)</code> with the current memory <code class="inline">(32,32)</code> → <code class="inline">(32,33)</code>, push through a Linear+Tanh → new memory <code class="inline">(32,32)</code>.</li>
+            <li>After all 56 steps, <code class="inline">H</code> is a 32-number summary of the whole 56-day window. A final <code class="inline">Linear(32,1)</code> turns that summary into a single forecast.</li>
+          </ul>
+        </div>
+      </details>
+
+      <p>Once you understand that loop, this is exactly equivalent and far faster (it's implemented in optimized C++/CUDA under the hood):</p>
+
+      <pre class="code"><span class="k">class</span> <span class="f">SimpleRnnModel</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+        self.output = nn.Linear(hidden_size, output_size)
+
+    <span class="k">def</span> <span class="f">forward</span>(self, X):
+        outputs, last_state = self.rnn(X)
+        <span class="k">return</span> self.output(outputs[:, -1])   <span class="c"># last time step's output</span></pre>
+
+      <div class="box why">
+        <div class="tag">Why <code class="inline">tanh</code>?</div>
+        It squashes values into <code class="inline">(-1, 1)</code>, which keeps the hidden state from exploding as it's repeatedly fed back into itself over many time steps. This is also exactly why plain RNNs still struggle with <strong>long</strong> sequences — gradients get multiplied by the same weight matrix (and pushed through tanh's saturating regions) at every step, so they tend to vanish. That single sentence is the entire motivation for LSTM/GRU, later in this chapter.
+      </div>
+
+      <div class="box gotcha">
+        <div class="tag">Notice what's <em>not</em> used here</div>
+        Only the output at the <em>final</em> time step is passed to the output layer (<code class="inline">outputs[:, -1]</code>). The RNN produces an output at every step, but for "predict tomorrow's value" we only care about its last summary. That changes in the Seq2Seq section below.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="deep-rnn">
+      <div class="sec-title"><span class="sec-num">04</span><h2>Deep RNNs — stacking recurrent layers</h2></div>
+      <div class="sec-tag">More capacity, same idea, one new argument</div>
+
+      <pre class="code"><span class="k">class</span> <span class="f">DeepRnnModel</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, input_size, hidden_size, output_size, num_layers):
+        super().__init__()
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers=num_layers,
+                          batch_first=True)
+        self.output = nn.Linear(hidden_size, output_size)
+
+    <span class="k">def</span> <span class="f">forward</span>(self, X):
+        outputs, last_state = self.rnn(X)
+        <span class="k">return</span> self.output(outputs[:, -1])</pre>
+
+      <p>Stacking recurrent layers is conceptually identical to stacking dense layers: the sequence of hidden states produced by layer 1 becomes the input sequence for layer 2, and so on. Each layer can learn a different level of abstraction over time (e.g. layer 1 might pick up daily patterns, layer 3 something longer-term) — same intuition as depth in CNNs, just applied along the time axis.</p>
+
+      <div class="box gotcha">
+        <div class="tag">Trade-off</div>
+        Depth adds capacity but also adds more opportunities for gradients to vanish/explode across both <em>depth</em> and <em>time</em> simultaneously. This is exactly why Layer Norm (section 8) and gated units like LSTM/GRU matter more as networks get deeper.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="multivar">
+      <div class="sec-title"><span class="sec-num">05</span><h2>Multivariate &amp; multitask forecasting</h2></div>
+      <div class="sec-tag">More inputs in, more outputs out — same architecture</div>
+
+      <p><strong>Multivariate</strong>: instead of feeding the RNN only the rail counts, feed it both <code class="inline">rail</code> and <code class="inline">bus</code> columns at every time step. Nothing about <code class="inline">SimpleRnnModel</code> changes — only <code class="inline">input_size</code> goes from 1 to 2. The RNN can now learn cross-series patterns (e.g. bus dips on days rail also dips).</p>
+
+      <p><strong>Multitask</strong>: predict <em>both</em> bus and rail ridership from the same model, by setting <code class="inline">output_size=2</code> instead of training two separate models. This is a form of multi-task learning: shared hidden representations often transfer useful structure between related targets, and you only maintain one model instead of two.</p>
+
+      <div class="box why">
+        <div class="tag">Why this matters</div>
+        This section is really just proof that "multivariate" and "multitask" are not new architectures — they are just changes to <code class="inline">input_size</code> and <code class="inline">output_size</code>. Once you see that, RNNs stop feeling like a zoo of special cases and start feeling like one flexible tool.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="horizon">
+      <div class="sec-title"><span class="sec-num">06</span><h2>Forecasting several steps ahead</h2></div>
+      <div class="sec-tag">Two strategies: recursive vs. direct</div>
+
+      <p>Say you need the next 14 days, not just tomorrow. Two options:</p>
+
+      <table>
+        <tr><th>Strategy</th><th>How it works</th><th>Downside</th></tr>
+        <tr><td><strong>Recursive (iterative)</strong></td><td>Predict day 1, feed that prediction back in as if it were real data, predict day 2, repeat.</td><td>Errors compound — a bad early prediction poisons every later one.</td></tr>
+        <tr><td><strong>Direct multi-output</strong></td><td>Change <code class="inline">output_size</code> to 14 and predict all 14 future values in one shot from the final hidden state.</td><td>Doesn't model dependencies <em>between</em> the 14 predicted days as explicitly.</td></tr>
+      </table>
+
+      <p>The notebook implements the direct approach with <code class="inline">ForecastAheadDataset</code>:</p>
+
+      <pre class="code"><span class="k">class</span> <span class="f">ForecastAheadDataset</span>(TimeSeriesDataset):
+    <span class="k">def</span> <span class="f">__len__</span>(self):
+        <span class="k">return</span> len(self.series) - self.window_length - 14 + 1
+
+    <span class="k">def</span> <span class="f">__getitem__</span>(self, idx):
+        end = idx + self.window_length
+        window = self.series[idx : end]
+        target = self.series[end : end + 14, 0]   <span class="c"># next 14 rail values</span>
+        <span class="k">return</span> window, target</pre>
+
+      <p>The model itself barely changes — just <code class="inline">output_size=14</code> on the final Linear layer, predicting the whole horizon from the single hidden state produced at the end of the window.</p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="seq2seq">
+      <div class="sec-title"><span class="sec-num">07</span><h2>Sequence-to-sequence forecasting</h2></div>
+      <div class="sec-tag">Using <em>every</em> time step's output, not just the last</div>
+
+      <p>Direct multi-output only asks the network to produce a useful summary at the <em>very last</em> step of the 56-day window. Seq2Seq is a small but powerful change: ask the network to produce a useful 14-day forecast <strong>at every single time step</strong>, using only what it has seen so far at that point.</p>
+
+      <div class="box why">
+        <div class="tag">Why this matters</div>
+        This turns one training example into 56 overlapping training signals instead of 1 — the loss is computed at every time step, not only the last. That means far more gradient signal per example, which typically makes training faster and more stable. It's also strictly <strong>causal</strong>: the forecast made at time step <em>t</em> only ever depends on time steps <code class="inline">≤ t</code>, never on the future — critical for a model you intend to actually deploy.
+      </div>
+
+      <pre class="code"><span class="k">class</span> <span class="f">Seq2SeqDataset</span>(ForecastAheadDataset):
+    <span class="k">def</span> <span class="f">__getitem__</span>(self, idx):
+        end = idx + self.window_length
+        window = self.series[idx : end]
+        target_period = self.series[idx + 1 : end + 14, 0]
+        target = target_period.unfold(dimension=0, size=14, step=1)  <span class="c"># one 14-step target per input step</span>
+        <span class="k">return</span> window, target
+
+<span class="k">class</span> <span class="f">Seq2SeqRnnModel</span>(SimpleRnnModel):
+    <span class="k">def</span> <span class="f">forward</span>(self, X):
+        outputs, last_state = self.rnn(X)
+        <span class="k">return</span> self.output(outputs)     <span class="c"># NOTE: outputs, not outputs[:, -1]</span></pre>
+
+      <details>
+        <summary>Teacher's aside — the one-line change that matters most</summary>
+        <div class="inner">
+          Compare this to the earlier <code class="inline">SimpleRnnModel.forward</code>: there it was <code class="inline">self.output(outputs[:, -1])</code> — one vector in, one prediction out. Here it's <code class="inline">self.output(outputs)</code> — a whole sequence of hidden states in, a whole sequence of predictions out. That's the entire difference between "one-shot forecasting" and "sequence-to-sequence forecasting." Everything else is bookkeeping in the dataset class to line up 14-step targets for every position.
+        </div>
+      </details>
+
+      <div class="box gotcha">
+        <div class="tag">How can <code class="inline">nn.Linear</code> apply to a 3D tensor?</div>
+        <code class="inline">outputs</code> has shape <code class="inline">(batch, time, hidden_size)</code>. <code class="inline">nn.Linear</code> under the hood calls <code class="inline">torch.matmul</code>, which broadcasts over leading dimensions — so the same weight matrix is applied independently and efficiently at every time step, exactly like a "shared dense layer across time." No loop needed.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="layernorm">
+      <div class="sec-title"><span class="sec-num">08</span><h2>Deep RNNs with Layer Normalization</h2></div>
+      <div class="sec-tag">Taming exploding/vanishing hidden states</div>
+
+      <pre class="code"><span class="k">class</span> <span class="f">SimpleRnnModelWithLN</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.memory_cell = nn.Sequential(
+            nn.Linear(input_size + hidden_size, hidden_size),
+            nn.LayerNorm(hidden_size),   <span class="c"># <-- the only addition</span>
+            nn.Tanh()
+        )
+        self.output = nn.Linear(hidden_size, output_size)</pre>
+
+      <div class="box why">
+        <div class="tag">Why Layer Norm (not Batch Norm)</div>
+        Batch Norm normalizes across the batch dimension using running statistics — awkward for RNNs, since the "batch statistics" at time step 3 aren't necessarily meaningful for time step 30, and sequence lengths vary. <strong>Layer Norm</strong> instead normalizes across the <em>features</em> of a single example at a single time step, independent of batch size or sequence position — so it slots cleanly inside the recurrence, re-centering and re-scaling the hidden state at every step before the nonlinearity, which keeps values from drifting to extreme magnitudes over long sequences.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="lstm">
+      <div class="sec-title"><span class="sec-num">09</span><h2>LSTM — Long Short-Term Memory</h2></div>
+      <div class="sec-tag">Solving vanishing gradients with gates</div>
+
+      <p>A plain RNN has one pathway for memory, repeatedly squashed by <code class="inline">tanh</code> — great for short-term patterns, bad for anything that needs to be remembered for a long time. LSTM's fix: keep <strong>two</strong> lines of memory running through time —</p>
+
+      <ul>
+        <li><strong>Cell state <code class="inline">c_t</code></strong> — a long-term memory conveyor belt that information can flow along almost unchanged (this is what actually solves vanishing gradients).</li>
+        <li><strong>Hidden state <code class="inline">h_t</code></strong> — the short-term, task-facing output at each step (same role as the RNN's <code class="inline">h</code>).</li>
+      </ul>
+
+      <p>Three learned <strong>gates</strong> (each a sigmoid, output between 0 and 1, acting like a "how much to let through" valve) control how the cell state is updated:</p>
+
+      <table>
+        <tr><th>Gate</th><th>Question it answers</th></tr>
+        <tr><td><strong>Forget gate</strong></td><td>"How much of the old cell state should I keep vs. throw away?"</td></tr>
+        <tr><td><strong>Input gate</strong></td><td>"How much of the new candidate information should I write into the cell state?"</td></tr>
+        <tr><td><strong>Output gate</strong></td><td>"How much of the (updated) cell state should I expose as this step's hidden state?"</td></tr>
+      </table>
+
+      <div class="eq">f_t = σ(...)   i_t = σ(...)   o_t = σ(...)
+c_t = f_t ⊙ c_(t−1)  +  i_t ⊙ candidate_t
+h_t = o_t ⊙ tanh(c_t)</div>
+
+      <p>In PyTorch, all of that machinery is a single line:</p>
+
+      <pre class="code"><span class="k">class</span> <span class="f">LstmModel</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.rnn = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.output = nn.Linear(hidden_size, output_size)
+
+    <span class="k">def</span> <span class="f">forward</span>(self, X):
+        outputs, last_state = self.rnn(X)
+        <span class="k">return</span> self.output(outputs[:, -1])</pre>
+
+      <div class="box why">
+        <div class="tag">Why this matters</div>
+        Notice the code is <em>identical</em> in shape to the plain RNN — swap <code class="inline">nn.RNN</code> for <code class="inline">nn.LSTM</code> and everything else (dataset, training loop, output layer) stays the same. That's deliberate: PyTorch's recurrent modules share the same interface precisely so you can experiment with the cell type without rewriting your pipeline.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="gru">
+      <div class="sec-title"><span class="sec-num">10</span><h2>GRU — Gated Recurrent Unit</h2></div>
+      <div class="sec-tag">LSTM's simpler, faster cousin</div>
+
+      <p>GRU merges the cell state and hidden state into one, and uses only <strong>two</strong> gates instead of three:</p>
+      <ul>
+        <li><strong>Update gate</strong> — how much of the old state to keep vs. replace with the new candidate (this single gate does the job of LSTM's forget <em>and</em> input gates combined).</li>
+        <li><strong>Reset gate</strong> — how much of the past state to consider when computing the new candidate.</li>
+      </ul>
+
+      <pre class="code"><span class="k">class</span> <span class="f">GruModel</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.rnn = nn.GRU(input_size, hidden_size, batch_first=True)
+        self.output = nn.Linear(hidden_size, output_size)
+
+    <span class="k">def</span> <span class="f">forward</span>(self, X):
+        outputs, last_state = self.rnn(X)
+        <span class="k">return</span> self.output(outputs[:, -1])</pre>
+
+      <div class="box why">
+        <div class="tag">LSTM vs. GRU — which to reach for?</div>
+        GRU has fewer parameters and trains a bit faster, and on many tasks (including ones like this notebook's) performs comparably to LSTM. LSTM's separate cell state gives it slightly more expressive control over memory, which can matter on very long or complex sequences. In practice: try GRU first as a faster baseline, reach for LSTM if you need the extra capacity.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="conv1d">
+      <div class="sec-title"><span class="sec-num">11</span><h2>1D convolutions for sequences</h2></div>
+      <div class="sec-tag">Trading recurrence for parallelism</div>
+
+      <p>RNNs process one time step at a time — inherently sequential, which is slow to train (can't parallelize across time). A <strong>1D convolution</strong> instead slides a small learned filter across the time axis, the same way a 2D conv slides across an image's height and width. This can be run fully in parallel across the whole sequence.</p>
+
+      <p>The notebook's simplest use: a <code class="inline">Conv1d</code> with a stride greater than 1 to <strong>downsample</strong> the sequence before feeding it to an RNN — shortening a long sequence into a shorter one that summarizes local windows, so the RNN has fewer steps to loop over.</p>
+
+      <pre class="code">|-----0-----||-----2----||-----4----|| ... |
+       |-----1----||-----3----||-----5---...|
+X:  0  1  2  3  4  5  6  7  8  9 10 11 ... 111
+Y:      from 4     6     8    10    12   ...  (predict 2 steps ahead of each window)</pre>
+
+      <div class="box why">
+        <div class="tag">Why this matters</div>
+        Downsampling with a strided conv is a cheap way to shorten very long sequences before recurrence — fewer RNN steps means both faster training and shorter gradient paths (less vanishing/exploding). It's a common pattern in speech and audio models, where raw sequences can be tens of thousands of steps long.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="wavenet">
+      <div class="sec-title"><span class="sec-num">12</span><h2>WaveNet — causal &amp; dilated convolutions</h2></div>
+      <div class="sec-tag">No recurrence at all, yet a huge receptive field</div>
+
+      <p>WaveNet takes 1D convolutions further: stack many causal convolutional layers, each with an exponentially growing <strong>dilation</strong> (gap between filter taps), and the network's receptive field — how far back in time it can "see" — grows exponentially with depth, without ever needing a loop over time steps.</p>
+
+      <div class="box why">
+        <div class="tag">Causal convolution — what and why</div>
+        A normal convolution centered at time <em>t</em> looks at both past <em>and future</em> neighbors — that's fine for images, but it's <strong>cheating</strong> for forecasting (the model would be peeking at the future). A <strong>causal</strong> convolution only ever looks at time <em>t</em> and earlier, guaranteed by left-padding the input before convolving (so the first outputs only see padding, never real future values).
+      </div>
+
+      <pre class="code"><span class="k">class</span> <span class="f">CausalConv1d</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, in_channels, out_channels, kernel_size, dilation=1, **kwargs):
+        super().__init__()
+        self.pad = (kernel_size - 1) * dilation
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size,
+                              padding=self.pad, dilation=dilation, **kwargs)
+
+    <span class="k">def</span> <span class="f">forward</span>(self, x):
+        out = self.conv(x)
+        <span class="c"># pad both sides symmetrically, then chop off the future-leaking right side</span>
+        <span class="k">return</span> out[:, :, :-self.pad] <span class="k">if</span> self.pad > 0 <span class="k">else</span> out</pre>
+
+      <p>Stack several of these with dilations <code class="inline">1, 2, 4, 8, ...</code> and each layer's receptive field doubles:</p>
+
+      <pre class="code">C2  /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\...
+   \  /  \  /  \  /  \  /  \  /  \  /  \
+     /    \      /    \      /    \
+C1  /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\  /\ /...\
+X:  0  1  2  3  4  5  6  7  8  9  10 11 12 ... 111
+Y:  1  2  3  4  5  6  7  8  9  10 11 12 13 ... 112</pre>
+
+      <pre class="code"><span class="k">class</span> <span class="f">WavenetModel</span>(nn.Module):
+    <span class="k">def</span> <span class="f">__init__</span>(self, input_size, hidden_size, output_size):
+        super().__init__()
+        layers = []
+        <span class="k">for</span> dilation <span class="k">in</span> (1, 2, 4, 8) * 2:      <span class="c"># two "octaves" of dilations</span>
+            conv = CausalConv1d(input_size, hidden_size, kernel_size=2,
+                                dilation=dilation)
+            layers += [conv, nn.ReLU()]
+            input_size = hidden_size
+        self.convs = nn.Sequential(*layers)
+        self.output = nn.Linear(hidden_size, output_size)
+
+    <span class="k">def</span> <span class="f">forward</span>(self, X):
+        Z = X.permute(0, 2, 1)     <span class="c"># Conv1d wants (batch, channels, time)</span>
+        Z = self.convs(Z)
+        Z = Z.permute(0, 2, 1)     <span class="c"># back to (batch, time, channels) for the Linear</span>
+        <span class="k">return</span> self.output(Z)</pre>
+
+      <div class="box gotcha">
+        <div class="tag">Why permute twice?</div>
+        <code class="inline">nn.Conv1d</code> expects channels before the time axis: <code class="inline">(batch, channels, time)</code>. Everything else in this chapter (RNNs, Linear layers) expects <code class="inline">(batch, time, features)</code>. The two <code class="inline">permute</code> calls are just translating between those two conventions — a detail that trips people up the first time they mix conv and recurrent code.
+      </div>
+
+      <div class="box why">
+        <div class="tag">WaveNet vs. RNN — the trade-off in one line</div>
+        RNNs get unlimited (in theory) memory but must be processed sequentially, one step at a time. WaveNet-style dilated CNNs are fully parallelizable across time (much faster to train on GPUs) but have a <em>fixed, finite</em> receptive field determined by depth and dilation — you must design the architecture to be as "wide" (in time) as the patterns you expect to need.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="bach">
+      <div class="sec-title"><span class="sec-num">13</span><h2>Case study: generating Bach chorales</h2></div>
+      <div class="sec-tag">Same tools, a generative task instead of forecasting</div>
+
+      <p>The exercise section repurposes the exact same causal-convolution / WaveNet ideas for a completely different task: given a sequence of chords, predict the <em>next note</em> (a classification problem over ~47 possible notes, instead of regression over ridership numbers). Once trained, the model can generate new music by predicting one note, appending it to the sequence, and repeating — this is <strong>autoregressive generation</strong>, the same principle behind text generation in large language models.</p>
+
+      <div class="box why">
+        <div class="tag">Temperature sampling — worth understanding well</div>
+        Always picking the single most likely next note makes music that is technically "safe" but repetitive and dull. <strong>Temperature</strong> controls how randomly notes are sampled from the model's predicted probability distribution:
+        <ul>
+          <li>Low temperature (e.g. 0.3) → sharper distribution → more conservative, more repetitive.</li>
+          <li>High temperature (e.g. 1.5+) → flatter distribution → more surprising, occasionally chaotic.</li>
+        </ul>
+        This exact same knob — temperature sampling over a probability distribution produced by an autoregressive model — is what controls "creativity" in modern text-generating LLMs too. Understanding it here, in a small, inspectable model, is genuinely transferable knowledge.
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ================================================================ -->
+    <section id="cheatsheet">
+      <div class="sec-title"><span class="sec-num">14</span><h2>Cheat sheet</h2></div>
+      <div class="sec-tag">The whole chapter in one table</div>
+
+      <table>
+        <tr><th>Tool</th><th>Core idea</th><th>Reach for it when...</th></tr>
+        <tr><td>Simple RNN</td><td>One hidden state, updated every step, shared weights</td><td>Short sequences, learning the concept, quick baseline</td></tr>
+        <tr><td>Deep RNN</td><td>Stack recurrent layers</td><td>Need more capacity, sequence isn't too long</td></tr>
+        <tr><td>Layer Norm + RNN</td><td>Normalize the hidden state each step</td><td>Training is unstable / gradients explode</td></tr>
+        <tr><td>LSTM</td><td>Separate long-term cell state + 3 gates</td><td>Long-range dependencies matter</td></tr>
+        <tr><td>GRU</td><td>2 gates, merged state, fewer params</td><td>Want LSTM-like power, faster / lighter</td></tr>
+        <tr><td>Seq2Seq training</td><td>Loss at every time step, not just the last</td><td>Want causal, step-by-step forecasts &amp; richer gradient signal</td></tr>
+        <tr><td>1D Conv (strided)</td><td>Downsample a long sequence</td><td>Sequence is very long, want to shrink it before an RNN</td></tr>
+        <tr><td>WaveNet (dilated causal conv)</td><td>Exponentially growing receptive field, fully parallel</td><td>Need speed/parallelism and a large but fixed context window</td></tr>
+      </table>
+
+      <div class="box why">
+        <div class="tag">The one idea to keep after closing this notebook</div>
+        Every architecture in this chapter is answering the same question — "how do I combine the recent past into a useful summary?" — with a different mechanism (loop + shared weights, gates, or dilated convolutions), and every dataset class is the same sliding-window pattern with a different definition of "target." Once those two ideas click, the rest is implementation detail.
+      </div>
+    </section>
+
+    <div class="footer">Study notes generated from <span class="mono">ageron/handson-mlp — Chapter 13: Processing Sequences Using RNNs and CNNs</span> (PyTorch edition). Code excerpts are reproduced from the original notebook for teaching purposes.</div>
+
+  </main>
+</div>
+
+<script>
+  // scrollspy: highlight the active section in the sidebar
+  const links = Array.from(document.querySelectorAll('nav.toc a'));
+  const sections = links.map(a => document.querySelector(a.getAttribute('href')));
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const id = '#' + entry.target.id;
+      const link = links.find(a => a.getAttribute('href') === id);
+      if (!link) return;
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+  sections.forEach(s => s && io.observe(s));
+</script>
+</body>
+</html>
